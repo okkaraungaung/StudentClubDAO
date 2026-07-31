@@ -25,10 +25,12 @@ export default function ProposalsPage() {
   const [profileName, setProfileName] = useState("Member");
   const [showAdmin, setShowAdmin] = useState(false);
   const [showCreateBox, setShowCreateBox] = useState(false);
+  const [treasuryBalance, setTreasuryBalance] = useState(null);
+  const [amountDraft, setAmountDraft] = useState("");
   const [proposals, setProposals] = useState([]);
   const [filter, setFilter] = useState("All");
 
-  const loadProposals = async ({ silent = false } = {}) => {
+  const loadProposals = async ({ silent = false, showErrors = true } = {}) => {
     if (!silent) {
       setLoading(true);
     }
@@ -41,9 +43,10 @@ export default function ProposalsPage() {
         return;
       }
 
-      const [adminAddress, count] = await Promise.all([
+      const [adminAddress, count, balance] = await Promise.all([
         session.contract.admin(),
         session.contract.proposalCount(),
+        session.contract.getTreasuryBalance(),
       ]);
 
       const items = [];
@@ -67,14 +70,17 @@ export default function ProposalsPage() {
 
       setProfileName(session.member.nickname || "Member");
       setNavUser(shortAddress(session.account));
+      setTreasuryBalance(balance);
       setShowAdmin(
         session.account.toLowerCase() === adminAddress.toLowerCase(),
       );
       setShowCreateBox(Number(session.member.role) === 2);
       setProposals(items.reverse());
     } catch (error) {
-      setTone("error");
-      setStatus(err(error));
+      if (showErrors) {
+        setTone("error");
+        setStatus(err(error));
+      }
     } finally {
       if (!silent) {
         setLoading(false);
@@ -119,11 +125,33 @@ export default function ProposalsPage() {
 
       await transaction.wait();
 
+      const proposalCount = await session.contract.proposalCount();
+      const optimisticProposal = {
+        id: String(proposalCount),
+        title,
+        description,
+        amount: parseEth(amount),
+        approveVotes: "0",
+        rejectVotes: "0",
+        status: "Voting Active",
+        voted: false,
+      };
+
+      setFilter("All");
+      setProposals((current) => [
+        optimisticProposal,
+        ...current.filter((proposal) => proposal.id !== optimisticProposal.id),
+      ]);
       setTone("success");
       setStatus("Proposal created successfully.");
       form.reset();
+      setAmountDraft("");
 
-      await loadProposals({ silent: true });
+      document
+        .getElementById("all-proposals")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+
+      await loadProposals({ silent: true, showErrors: false });
     } catch (error) {
       setTone("error");
       setStatus(err(error));
@@ -201,6 +229,34 @@ export default function ProposalsPage() {
 
     return proposal.status === filter;
   });
+
+  const treasuryValue = treasuryBalance !== null ? formatEth(treasuryBalance) : "—";
+
+  let requestedAmountWei = null;
+
+  if (amountDraft.trim()) {
+    try {
+      requestedAmountWei = parseEth(amountDraft);
+    } catch {
+      requestedAmountWei = null;
+    }
+  }
+
+  const hasAmountDraft = amountDraft.trim().length > 0;
+  const requestedPercent =
+    requestedAmountWei !== null && treasuryBalance !== null && treasuryBalance > 0n
+      ? Number((requestedAmountWei * 10000n) / treasuryBalance) / 100
+      : null;
+  const amountIsOverTreasury =
+    requestedAmountWei !== null &&
+    treasuryBalance !== null &&
+    requestedAmountWei > treasuryBalance;
+  const amountDifference =
+    requestedAmountWei !== null && treasuryBalance !== null
+      ? amountIsOverTreasury
+        ? requestedAmountWei - treasuryBalance
+        : treasuryBalance - requestedAmountWei
+      : null;
 
   const getStatusClass = (proposalStatus) => {
     switch (proposalStatus) {
@@ -384,7 +440,8 @@ export default function ProposalsPage() {
                 <p>
                   Submit a clear proposal for members to review and vote on.
                   Include the requested amount, recipient wallet, and voting
-                  duration.
+                  duration. The form shows the live treasury balance so you can
+                  size the ask before publishing.
                 </p>
 
                 <div className={styles.createSteps}>
@@ -414,6 +471,11 @@ export default function ProposalsPage() {
                   <div>
                     <span>Proposal details</span>
                     <h3>Funding request</h3>
+                  </div>
+
+                  <div className={styles.formHeaderMetric}>
+                    <span>Current treasury</span>
+                    <strong>{treasuryValue}</strong>
                   </div>
                 </div>
 
@@ -452,11 +514,55 @@ export default function ProposalsPage() {
                         min="0"
                         step="0.0001"
                         placeholder="0.00"
+                        value={amountDraft}
+                        onChange={(event) => setAmountDraft(event.target.value)}
                         required
                         disabled={creating}
                       />
                       <span>ETH</span>
                     </div>
+
+                    <p className={styles.amountGuidance}>
+                      {treasuryBalance === null
+                        ? "Loading the live treasury balance..."
+                        : amountIsOverTreasury
+                          ? `This ask is larger than the current treasury of ${treasuryValue}.`
+                          : hasAmountDraft && requestedAmountWei !== null
+                            ? `You are requesting ${formatEth(requestedAmountWei)} from a treasury of ${treasuryValue}.`
+                            : `Enter an amount to compare it against the current treasury of ${treasuryValue}.`}
+                    </p>
+
+                    {requestedAmountWei !== null && treasuryBalance !== null && (
+                      <div
+                        className={`${styles.amountComparison} ${
+                          amountIsOverTreasury
+                            ? styles.amountComparisonDanger
+                            : styles.amountComparisonSuccess
+                        }`}
+                      >
+                        <div>
+                          <span>Your ask</span>
+                          <strong>{formatEth(requestedAmountWei)}</strong>
+                        </div>
+
+                        <div>
+                          <span>
+                            {amountIsOverTreasury ? "Over treasury" : "Remaining"}
+                          </span>
+                          <strong>
+                            {amountDifference !== null
+                              ? formatEth(amountDifference)
+                              : "—"}
+                          </strong>
+                        </div>
+
+                        <div className={styles.amountComparisonSummary}>
+                          {requestedPercent !== null
+                            ? `${requestedPercent.toFixed(2)}% of treasury`
+                            : "Treasury comparison unavailable"}
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   <div className={styles.formGroup}>

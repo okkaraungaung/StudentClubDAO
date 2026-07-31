@@ -598,6 +598,19 @@
   margin-bottom: 24px;
 }
 
+.formHeaderMetric {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  margin-left: auto;
+  padding: 10px 14px;
+  border: 1px solid rgba(32, 129, 226, 0.14);
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(239, 248, 255, 0.95), #ffffff);
+  box-shadow: 0 10px 22px rgba(16, 24, 40, 0.06);
+}
+
 .formHeader span {
   color: #98a2b3;
   font-size: 11px;
@@ -606,9 +619,19 @@
   text-transform: uppercase;
 }
 
+.formHeaderMetric span {
+  color: #2081e2;
+}
+
 .formHeader h3 {
   margin: 3px 0 0;
   font-size: 18px;
+}
+
+.formHeaderMetric strong {
+  color: #101828;
+  font-size: 14px;
+  letter-spacing: -0.02em;
 }
 
 .formGroup {
@@ -684,6 +707,70 @@
   font-size: 11px;
   font-weight: 850;
   transform: translateY(-50%);
+}
+
+.amountGuidance {
+  margin: 10px 0 0;
+  color: #667085;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.amountComparison {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+  padding: 14px;
+  border: 1px solid #e5e8eb;
+  border-radius: 16px;
+  background: #f8fafc;
+}
+
+.amountComparison > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.amountComparison span {
+  color: #98a2b3;
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.amountComparison strong {
+  color: #101828;
+  font-size: 15px;
+  letter-spacing: -0.02em;
+}
+
+.amountComparisonSummary {
+  grid-column: 1 / -1;
+  padding-top: 2px;
+  color: #2081e2;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.amountComparisonSuccess {
+  border-color: rgba(18, 183, 106, 0.18);
+  background: linear-gradient(135deg, rgba(236, 253, 243, 0.94), #ffffff);
+}
+
+.amountComparisonSuccess .amountComparisonSummary {
+  color: #027a48;
+}
+
+.amountComparisonDanger {
+  border-color: rgba(239, 68, 68, 0.18);
+  background: linear-gradient(135deg, rgba(255, 247, 247, 0.96), #ffffff);
+}
+
+.amountComparisonDanger .amountComparisonSummary {
+  color: #b42318;
 }
 
 .submitButton {
@@ -1102,6 +1189,11 @@
   .createSection {
     grid-template-columns: 1fr;
   }
+
+  .formHeaderMetric {
+    align-items: flex-start;
+    margin-left: 0;
+  }
 }
 
 @media (max-width: 800px) {
@@ -1176,6 +1268,10 @@
 
   .createForm {
     padding: 19px;
+  }
+
+  .amountComparison {
+    grid-template-columns: 1fr;
   }
 
   .filters {
