@@ -29,6 +29,8 @@ export default function ProposalsPage() {
   const [amountDraft, setAmountDraft] = useState("");
   const [proposals, setProposals] = useState([]);
   const [filter, setFilter] = useState("All");
+  console.log(" ");
+  
 
   const loadProposals = async ({ silent = false, showErrors = true } = {}) => {
     if (!silent) {
