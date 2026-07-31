@@ -11,6 +11,7 @@ import {
   createDaoClient,
   err,
   formatEth,
+  loadRecentActivity,
   initialFrom,
   parseEth,
   roleName,
@@ -34,6 +35,7 @@ export default function DashboardPage() {
   const [walletCopied, setWalletCopied] = useState(false);
   const [nickname, setNickname] = useState("");
   const [depositAmount, setDepositAmount] = useState("");
+  const [recentActivity, setRecentActivity] = useState([]);
 
   const [metrics, setMetrics] = useState({
     adminAddress: "",
@@ -59,12 +61,13 @@ export default function DashboardPage() {
         return;
       }
 
-      const [adminAddress, treasuryBalance, membershipFee, memberCount] =
+      const [adminAddress, treasuryBalance, membershipFee, memberCount, activity] =
         await Promise.all([
           session.contract.admin(),
           session.contract.getTreasuryBalance(),
           session.contract.membershipFee(),
           session.contract.memberCount(),
+          loadRecentActivity(session.contract, session.provider).catch(() => []),
         ]);
 
       setAccount(session.account);
@@ -82,6 +85,7 @@ export default function DashboardPage() {
         membershipFee,
         memberCount,
       });
+      setRecentActivity(activity);
     } catch (error) {
       setTone("error");
       setStatus(err(error));
@@ -138,8 +142,7 @@ export default function DashboardPage() {
       setStatus("");
 
       const session = await createDaoClient();
-      const transaction =
-        await session.contract.updateNickname(cleanedNickname);
+      const transaction = await session.contract.changeNickname(cleanedNickname);
 
       await transaction.wait();
 
@@ -205,41 +208,6 @@ export default function DashboardPage() {
 
   const memberCountValue =
     metrics.memberCount !== null ? String(metrics.memberCount) : "—";
-
-  const activityItems = [
-    {
-      user: "Treasury",
-      text: "received a new community contribution",
-      time: "Recently",
-      icon: "deposit",
-      type: "Transfer",
-      artwork: "activity-blue",
-    },
-    {
-      user: "Community",
-      text: "published a new funding proposal",
-      time: "Today",
-      icon: "activity",
-      type: "Proposal",
-      artwork: "activity-purple",
-    },
-    {
-      user: "Members",
-      text: "participated in the latest governance vote",
-      time: "This week",
-      icon: "members",
-      type: "Vote",
-      artwork: "activity-orange",
-    },
-    {
-      user: nicknameValue,
-      text: "is an active member of this DAO",
-      time: "Active now",
-      icon: "profile",
-      type: "Member",
-      artwork: "activity-green",
-    },
-  ];
 
   return (
     <>
@@ -472,25 +440,43 @@ export default function DashboardPage() {
               </div>
 
               <div className="activity-list">
-                {activityItems.map((activity) => (
-                  <article
-                    className="activity-item"
-                    key={`${activity.user}-${activity.type}`}
-                  >
-                    <div className={`activity-artwork ${activity.artwork}`}>
-                      <UiIcon name={activity.icon} size={21} />
+                {recentActivity.length > 0 ? (
+                  recentActivity.map((activity) => (
+                    <article
+                      className="activity-item"
+                      key={activity.id}
+                    >
+                      <div className={`activity-artwork ${activity.artwork}`}>
+                        <UiIcon name={activity.icon} size={21} />
+                      </div>
+
+                      <div className="activity-description">
+                        <p>
+                          <strong>{activity.user}</strong> {activity.text}
+                        </p>
+                        <span>{activity.time}</span>
+                      </div>
+
+                      <span className="activity-type">{activity.type}</span>
+                    </article>
+                  ))
+                ) : (
+                  <article className="activity-item">
+                    <div className="activity-artwork activity-blue">
+                      <UiIcon name="activity" size={21} />
                     </div>
 
                     <div className="activity-description">
                       <p>
-                        <strong>{activity.user}</strong> {activity.text}
+                        <strong>No on-chain activity yet</strong> New deposits,
+                        proposals, votes, and fee payments will appear here.
                       </p>
-                      <span>{activity.time}</span>
+                      <span>Waiting for blockchain events</span>
                     </div>
 
-                    <span className="activity-type">{activity.type}</span>
+                    <span className="activity-type">Live feed</span>
                   </article>
-                ))}
+                )}
               </div>
             </div>
 

@@ -45,10 +45,44 @@ const NAV_ITEMS = [
     ),
   },
   {
+    href: "/members",
+    label: "Members",
+    badge: null,
+    requiredAccess: "executive",
+    icon: (
+      <>
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth="2"
+          d="M8.4 11a3.1 3.1 0 1 0 0-6.2 3.1 3.1 0 0 0 0 6.2z"
+        />
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth="2"
+          d="M16.3 12.4a2.6 2.6 0 1 0 0-5.2 2.6 2.6 0 0 0 0 5.2z"
+        />
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth="2"
+          d="M4.1 20a5.8 5.8 0 0 1 8.7 0"
+        />
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth="2"
+          d="M13.4 20a4.8 4.8 0 0 1 6.5 0"
+        />
+      </>
+    ),
+  },
+  {
     href: "/admin",
     label: "Admin",
     badge: null,
-    hiddenWhenNoAccess: true,
+    requiredAccess: "admin",
     icon: (
       <>
         <path
@@ -73,6 +107,7 @@ export default function DashboardLayout({
   navUser = "Member",
   profileName,
   showAdmin = false,
+  showExecutive = false,
   actions = null,
   children,
 }) {
@@ -95,7 +130,11 @@ export default function DashboardLayout({
         <nav className="sidebar-nav">
           <div className="nav-section">Menu</div>
           {NAV_ITEMS.map((item) => {
-            const hidden = item.hiddenWhenNoAccess && !showAdmin;
+            const requiresAdmin = item.requiredAccess === "admin";
+            const requiresExecutive = item.requiredAccess === "executive";
+            const hidden =
+              (requiresAdmin && !showAdmin) ||
+              (requiresExecutive && !(showAdmin || showExecutive));
             const isActive = router.pathname === item.href;
 
             return (
