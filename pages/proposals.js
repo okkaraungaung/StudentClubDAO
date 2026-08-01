@@ -713,7 +713,7 @@ export default function ProposalsPage() {
                           <span
                             className={`${styles.deadlineBadge} ${deadlineClass}`}
                           >
-                            <UiIcon name="clock" size={12} />
+                            <UiIcon name="clock" size={13} />
                             <span>{timeRemaining}</span>
                           </span>
                         </div>

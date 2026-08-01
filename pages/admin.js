@@ -8,7 +8,9 @@ import {
   dateToUnixEnd,
   dateToUnixStart,
   err,
+  formatEth,
   formatPeriodRange,
+  parseEth,
   shortAddress,
 } from "../lib/dao";
 import styles from "../css/admin.module.css";
@@ -24,6 +26,7 @@ export default function AdminPage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [periods, setPeriods] = useState([]);
   const [memberCount, setMemberCount] = useState(0);
+  const [membershipFee, setMembershipFeeValue] = useState(0n);
 
   const loadPeriods = async (contract) => {
     const count = await contract.paymentPeriodCount();
@@ -56,9 +59,10 @@ export default function AdminPage() {
         throw new Error("Admin access only.");
       }
 
-      const [items, totalMembers] = await Promise.all([
+      const [items, totalMembers, currentMembershipFee] = await Promise.all([
         loadPeriods(session.contract),
         session.contract.memberCount(),
+        session.contract.membershipFee(),
       ]);
 
       setProfileName(session.member.nickname || "Admin");
@@ -67,6 +71,7 @@ export default function AdminPage() {
       setIsAdmin(true);
       setPeriods(items);
       setMemberCount(Number(totalMembers));
+      setMembershipFeeValue(currentMembershipFee);
     } catch (error) {
       setTone("error");
       setStatus(err(error));
@@ -181,6 +186,47 @@ export default function AdminPage() {
     }
   };
 
+  const changeMembershipFee = async (event) => {
+    event.preventDefault();
+
+    try {
+      setProcessingAction("change-fee");
+      setStatus("");
+
+      const form = event.currentTarget;
+      const formData = new FormData(form);
+
+      const feeInput = String(formData.get("membershipFee") || "").trim();
+
+      if (!feeInput) {
+        throw new Error("Please enter a new membership fee.");
+      }
+
+      const newFee = parseEth(feeInput);
+
+      if (newFee <= 0n) {
+        throw new Error("Membership fee must be greater than zero.");
+      }
+
+      const session = await createDaoClient();
+
+      const transaction = await session.contract.setMembershipFee(newFee);
+
+      await transaction.wait();
+
+      setTone("success");
+      setStatus("Membership fee updated successfully.");
+      form.reset();
+
+      await loadAdmin({ silent: true });
+    } catch (error) {
+      setTone("error");
+      setStatus(err(error));
+    } finally {
+      setProcessingAction("");
+    }
+  };
+
   const removeOverdue = async (event) => {
     event.preventDefault();
 
@@ -224,6 +270,7 @@ export default function AdminPage() {
   };
 
   const periodCount = periods.length;
+  const membershipFeeLabel = formatEth(membershipFee);
 
   return (
     <>
@@ -317,8 +364,8 @@ export default function AdminPage() {
                 </div>
 
                 <div>
-                  <span>Tools</span>
-                  <strong>3</strong>
+                  <span>Current fee</span>
+                  <strong>{membershipFeeLabel}</strong>
                 </div>
               </div>
             </div>
@@ -560,6 +607,61 @@ export default function AdminPage() {
                       {processingAction === "add-member"
                         ? "Adding member..."
                         : "Add DAO member"}
+                    </button>
+                  </form>
+                </article>
+
+                <article className={styles.toolCard}>
+                  <div className={styles.toolHeader}>
+                    <div className={`${styles.toolIcon} ${styles.amberIcon}`}>
+                      <UiIcon name="fee" size={21} />
+                    </div>
+
+                    <div>
+                      <span>Membership control</span>
+                      <h2>Change membership fee</h2>
+                    </div>
+                  </div>
+
+                  <p className={styles.toolDescription}>
+                    Update the ETH amount required for future membership
+                    payments.
+                  </p>
+
+                  <div className={styles.feeHighlight}>
+                    <span>Current fee</span>
+                    <strong>{membershipFeeLabel}</strong>
+
+                    <p>
+                      This value is used by the Fees page and the on-chain
+                      payment flow.
+                    </p>
+                  </div>
+
+                  <form className={styles.form} onSubmit={changeMembershipFee}>
+                    <div className={styles.formGroup}>
+                      <label htmlFor="membershipFee">New fee (ETH)</label>
+
+                      <input
+                        id="membershipFee"
+                        name="membershipFee"
+                        inputMode="decimal"
+                        placeholder="0.001"
+                        required
+                        disabled={processingAction === "change-fee"}
+                      />
+                    </div>
+
+                    <button
+                      type="submit"
+                      className={styles.primarySubmitButton}
+                      disabled={loading || processingAction === "change-fee"}
+                    >
+                      <UiIcon name="fee" size={17} />
+
+                      {processingAction === "change-fee"
+                        ? "Updating fee..."
+                        : "Update membership fee"}
                     </button>
                   </form>
                 </article>

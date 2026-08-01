@@ -58,6 +58,7 @@ contract StudentClubDAO {
     event NicknameChanged(address indexed member, string oldNickname, string newNickname);
     event PaymentPeriodCreated(uint256 indexed periodId, string name, uint256 startTime, uint256 endTime);
     event MembershipFeePaid(address indexed member, uint256 indexed periodId, uint256 amount);
+    event MembershipFeeUpdated(uint256 oldFee, uint256 newFee);
     event FundsDeposited(address indexed sender, uint256 amount);
     event ProposalCreated(uint256 indexed proposalId, string title, uint256 amount, address recipient, address proposer);
     event VoteSubmitted(uint256 indexed proposalId, address indexed voter, bool approve);
@@ -183,6 +184,13 @@ contract StudentClubDAO {
         require(!hasPaid[memberAddress][periodId], "Already paid");
         _remove(memberAddress);
         emit OverdueMemberRemoved(memberAddress, periodId);
+    }
+
+    function setMembershipFee(uint256 newFee) external onlyAdmin {
+        require(newFee > 0, "Fee required");
+        uint256 oldFee = membershipFee;
+        membershipFee = newFee;
+        emit MembershipFeeUpdated(oldFee, newFee);
     }
 
     function payMembershipFee(uint256 periodId) external payable onlyActiveMember {
