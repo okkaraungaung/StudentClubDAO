@@ -16,6 +16,8 @@ import {
   parseEth,
   roleName,
   shortAddress,
+  notifyDaoChainUpdate,
+  subscribeDaoChainUpdates,
 } from "../lib/dao";
 
 export default function DashboardPage() {
@@ -36,6 +38,7 @@ export default function DashboardPage() {
   const [nickname, setNickname] = useState("");
   const [depositAmount, setDepositAmount] = useState("");
   const [recentActivity, setRecentActivity] = useState([]);
+  const [activityLoading, setActivityLoading] = useState(true);
 
   const [metrics, setMetrics] = useState({
     adminAddress: "",
@@ -61,13 +64,12 @@ export default function DashboardPage() {
         return;
       }
 
-      const [adminAddress, treasuryBalance, membershipFee, memberCount, activity] =
+      const [adminAddress, treasuryBalance, membershipFee, memberCount] =
         await Promise.all([
           session.contract.admin(),
           session.contract.getTreasuryBalance(),
           session.contract.membershipFee(),
           session.contract.memberCount(),
-          loadRecentActivity(session.contract, session.provider).catch(() => []),
         ]);
 
       setAccount(session.account);
@@ -85,10 +87,23 @@ export default function DashboardPage() {
         membershipFee,
         memberCount,
       });
-      setRecentActivity(activity);
+
+      setActivityLoading(true);
+
+      void loadRecentActivity(session.contract, session.provider)
+        .then((activity) => {
+          setRecentActivity(activity);
+        })
+        .catch(() => {
+          setRecentActivity([]);
+        })
+        .finally(() => {
+          setActivityLoading(false);
+        });
     } catch (error) {
       setTone("error");
       setStatus(err(error));
+      setActivityLoading(false);
     } finally {
       if (!silent) {
         setLoading(false);
@@ -104,6 +119,19 @@ export default function DashboardPage() {
         clearTimeout(walletCopyTimer.current);
       }
     };
+  }, []);
+
+  useEffect(() => {
+    const refreshFromChainUpdate = () => {
+      void loadDashboard({ silent: true });
+    };
+
+    const unsubscribe = subscribeDaoChainUpdates(refreshFromChainUpdate);
+
+    return () => {
+      unsubscribe();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const copyWalletAddress = async () => {
@@ -142,13 +170,15 @@ export default function DashboardPage() {
       setStatus("");
 
       const session = await createDaoClient();
-      const transaction = await session.contract.changeNickname(cleanedNickname);
+      const transaction =
+        await session.contract.changeNickname(cleanedNickname);
 
       await transaction.wait();
 
       setTone("success");
       setStatus("Your profile nickname was updated successfully.");
       await loadDashboard({ silent: true });
+      notifyDaoChainUpdate();
     } catch (error) {
       setTone("error");
       setStatus(err(error));
@@ -181,6 +211,7 @@ export default function DashboardPage() {
       setTone("success");
       setStatus("Your ETH deposit was added to the DAO treasury.");
       await loadDashboard({ silent: true });
+      notifyDaoChainUpdate();
     } catch (error) {
       setTone("error");
       setStatus(err(error));
@@ -208,6 +239,7 @@ export default function DashboardPage() {
 
   const memberCountValue =
     metrics.memberCount !== null ? String(metrics.memberCount) : "—";
+  const activityHeaderLabel = activityLoading ? "Loading..." : "Refresh";
 
   return (
     <>
@@ -433,19 +465,33 @@ export default function DashboardPage() {
                   type="button"
                   className="refresh-button"
                   onClick={() => loadDashboard()}
-                  disabled={loading}
+                  disabled={loading || activityLoading}
                 >
-                  {loading ? "Loading..." : "Refresh"}
+                  {activityHeaderLabel}
                 </button>
               </div>
 
               <div className="activity-list">
-                {recentActivity.length > 0 ? (
+                {activityLoading ? (
+                  <article className="activity-item">
+                    <div className="activity-artwork activity-blue">
+                      <UiIcon name="activity" size={21} />
+                    </div>
+
+                    <div className="activity-description">
+                      <p>
+                        <strong>Loading recent activity</strong> Reading
+                        on-chain events for deposits, proposals, votes, and fee
+                        payments.
+                      </p>
+                      <span>Please wait a moment</span>
+                    </div>
+
+                    <span className="activity-type">Live feed</span>
+                  </article>
+                ) : recentActivity.length > 0 ? (
                   recentActivity.map((activity) => (
-                    <article
-                      className="activity-item"
-                      key={activity.id}
-                    >
+                    <article className="activity-item" key={activity.id}>
                       <div className={`activity-artwork ${activity.artwork}`}>
                         <UiIcon name={activity.icon} size={21} />
                       </div>

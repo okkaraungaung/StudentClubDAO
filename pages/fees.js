@@ -10,6 +10,7 @@ import {
   formatEth,
   formatPeriodRange,
   shortAddress,
+  notifyDaoChainUpdate,
 } from "../lib/dao";
 import styles from "../css/fees.module.css";
 
@@ -103,6 +104,7 @@ export default function FeesPage() {
       setStatus("Membership fee paid successfully.");
 
       await loadFees({ silent: true });
+      notifyDaoChainUpdate();
     } catch (error) {
       setTone("error");
       setStatus(err(error));

@@ -12,6 +12,7 @@ import {
   formatTimeRemaining,
   parseEth,
   shortAddress,
+  notifyDaoChainUpdate,
 } from "../lib/dao";
 
 export default function ProposalsPage() {
@@ -162,6 +163,7 @@ export default function ProposalsPage() {
       setStatus("Proposal created successfully.");
       form.reset();
       setAmountDraft("");
+      notifyDaoChainUpdate();
 
       document
         .getElementById("all-proposals")
@@ -194,6 +196,7 @@ export default function ProposalsPage() {
       );
 
       await loadProposals({ silent: true });
+      notifyDaoChainUpdate();
     } catch (error) {
       setTone("error");
       setStatus(err(error));
@@ -216,6 +219,7 @@ export default function ProposalsPage() {
       setStatus("Proposal executed successfully.");
 
       await loadProposals({ silent: true });
+      notifyDaoChainUpdate();
     } catch (error) {
       setTone("error");
       setStatus(err(error));

@@ -4,7 +4,12 @@ import { useEffect, useRef, useState } from "react";
 import AuthLayout from "../components/AuthLayout";
 import WalletChip from "../components/WalletChip";
 import StatusMessage from "../components/StatusMessage";
-import { copyText, createDaoClient, err } from "../lib/dao";
+import {
+  copyText,
+  createDaoClient,
+  err,
+  notifyDaoChainUpdate,
+} from "../lib/dao";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -76,6 +81,7 @@ export default function RegisterPage() {
 
       const tx = await contract.createProfile(name);
       await tx.wait();
+      notifyDaoChainUpdate();
       await router.push("/dashboard");
     } catch (e) {
       setTone("error");

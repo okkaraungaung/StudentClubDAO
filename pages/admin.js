@@ -12,6 +12,7 @@ import {
   formatPeriodRange,
   parseEth,
   shortAddress,
+  notifyDaoChainUpdate,
 } from "../lib/dao";
 import styles from "../css/admin.module.css";
 
@@ -135,6 +136,7 @@ export default function AdminPage() {
       form.reset();
 
       await loadAdmin({ silent: true });
+      notifyDaoChainUpdate();
     } catch (error) {
       setTone("error");
       setStatus(err(error));
@@ -178,6 +180,7 @@ export default function AdminPage() {
       form.reset();
 
       await loadAdmin({ silent: true });
+      notifyDaoChainUpdate();
     } catch (error) {
       setTone("error");
       setStatus(err(error));
@@ -219,6 +222,7 @@ export default function AdminPage() {
       form.reset();
 
       await loadAdmin({ silent: true });
+      notifyDaoChainUpdate();
     } catch (error) {
       setTone("error");
       setStatus(err(error));
@@ -261,6 +265,7 @@ export default function AdminPage() {
       form.reset();
 
       await loadAdmin({ silent: true });
+      notifyDaoChainUpdate();
     } catch (error) {
       setTone("error");
       setStatus(err(error));
