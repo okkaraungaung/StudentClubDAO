@@ -40,6 +40,8 @@ contract StudentClubDAO {
     uint256 public membershipFee = 0.001 ether;
 
     mapping(address => Member) public members;
+    address[] private memberAddresses;
+    mapping(address => bool) private memberListed;
     mapping(bytes32 => bool) private nicknameTaken;
     mapping(uint256 => PaymentPeriod) public paymentPeriods;
     mapping(address => mapping(uint256 => bool)) public hasPaid;
@@ -88,6 +90,7 @@ contract StudentClubDAO {
     constructor() {
         admin = msg.sender;
         members[msg.sender] = Member("", MemberRole.Executive, true, false, 0);
+        _trackMemberAddress(msg.sender);
         memberCount = 1;
         emit MemberAdded(msg.sender, MemberRole.Executive, 0);
     }
@@ -149,6 +152,7 @@ contract StudentClubDAO {
         require(members[memberAddress].role == MemberRole.None, "Already member");
         require(paymentPeriods[joinedPeriod].exists, "Invalid period");
         members[memberAddress] = Member("", role, true, false, joinedPeriod);
+        _trackMemberAddress(memberAddress);
         memberCount++;
         emit MemberAdded(memberAddress, role, joinedPeriod);
     }
@@ -250,6 +254,10 @@ contract StudentClubDAO {
         return address(this).balance;
     }
 
+    function getMemberAddresses() external view returns (address[] memory) {
+        return memberAddresses;
+    }
+
     function getProposalStatus(uint256 proposalId) external view returns (string memory) {
         Proposal storage proposal = proposals[proposalId];
         require(proposal.id != 0, "Proposal missing");
@@ -268,6 +276,15 @@ contract StudentClubDAO {
         member.active = false;
         member.profileCreated = false;
         memberCount--;
+    }
+
+    function _trackMemberAddress(address memberAddress) private {
+        if (memberListed[memberAddress]) {
+            return;
+        }
+
+        memberListed[memberAddress] = true;
+        memberAddresses.push(memberAddress);
     }
 
     function _validateNickname(string calldata nickname) private pure {

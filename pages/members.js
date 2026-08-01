@@ -43,10 +43,16 @@ export default function MembersPage() {
     currentPeriodRange: "No payment periods yet",
   });
 
-  const loadMembers = async ({ silent = false, periodOverride = null } = {}) => {
+  const loadMembers = async ({
+    silent = false,
+    periodOverride = null,
+  } = {}) => {
     if (!silent) {
       setLoading(true);
     }
+
+    setStatus("");
+    setTone("success");
 
     try {
       const session = await createDaoClient();
@@ -57,7 +63,8 @@ export default function MembersPage() {
         return;
       }
 
-      const isAdmin = session.account.toLowerCase() === adminAddress.toLowerCase();
+      const isAdmin =
+        session.account.toLowerCase() === adminAddress.toLowerCase();
       const isExecutive = Number(session.member.role) === 2;
 
       if (!isAdmin && !isExecutive) {
@@ -82,6 +89,13 @@ export default function MembersPage() {
       setMembers(directory.members);
       setMembershipFee(directory.membershipFee);
       setSummary(directory.stats);
+
+      if (Number(directory.memberCount) > 0 && directory.members.length === 0) {
+        setTone("error");
+        setStatus(
+          "Could not read the member history from this RPC endpoint. The contract stores the roster in events, so the page needs a provider that can return historical logs.",
+        );
+      }
     } catch (error) {
       setTone("error");
       setStatus(err(error));
@@ -126,7 +140,8 @@ export default function MembersPage() {
     membershipFee !== null ? formatEth(membershipFee) : "—";
 
   const currentPeriodLabel = summary.currentPeriodLabel || "No period selected";
-  const currentPeriodRange = summary.currentPeriodRange || "No payment periods yet";
+  const currentPeriodRange =
+    summary.currentPeriodRange || "No payment periods yet";
 
   const normalizedSearch = searchQuery.trim().toLowerCase();
 
@@ -149,7 +164,9 @@ export default function MembersPage() {
         member.joinedPeriodLabel,
         member.joinedAt,
       ].some((value) =>
-        String(value || "").toLowerCase().includes(normalizedSearch),
+        String(value || "")
+          .toLowerCase()
+          .includes(normalizedSearch),
       );
 
     return matchesFilter && matchesSearch;
@@ -247,8 +264,12 @@ export default function MembersPage() {
                 <UiIcon name="members" size={28} />
               </div>
 
-              <span className={styles.summaryLabel}>Selected payment period</span>
-              <strong className={styles.summaryValue}>{currentPeriodLabel}</strong>
+              <span className={styles.summaryLabel}>
+                Selected payment period
+              </span>
+              <strong className={styles.summaryValue}>
+                {currentPeriodLabel}
+              </strong>
               <p className={styles.summaryRange}>{currentPeriodRange}</p>
 
               <div className={styles.summaryDivider} />
@@ -325,7 +346,9 @@ export default function MembersPage() {
 
               <article className={styles.statisticCard}>
                 <div className={styles.statisticTop}>
-                  <div className={`${styles.statisticIcon} ${styles.purpleIcon}`}>
+                  <div
+                    className={`${styles.statisticIcon} ${styles.purpleIcon}`}
+                  >
                     <UiIcon name="members" size={22} />
                   </div>
 
@@ -345,7 +368,9 @@ export default function MembersPage() {
 
               <article className={styles.statisticCard}>
                 <div className={styles.statisticTop}>
-                  <div className={`${styles.statisticIcon} ${styles.orangeIcon}`}>
+                  <div
+                    className={`${styles.statisticIcon} ${styles.orangeIcon}`}
+                  >
                     <UiIcon name="fee" size={22} />
                   </div>
 
@@ -365,7 +390,9 @@ export default function MembersPage() {
 
               <article className={styles.statisticCard}>
                 <div className={styles.statisticTop}>
-                  <div className={`${styles.statisticIcon} ${styles.greenIcon}`}>
+                  <div
+                    className={`${styles.statisticIcon} ${styles.greenIcon}`}
+                  >
                     <UiIcon name="calendar" size={22} />
                   </div>
 
@@ -476,7 +503,9 @@ export default function MembersPage() {
                           </div>
                         </div>
 
-                        <span className={`${styles.memberStatus} ${statusClass}`}>
+                        <span
+                          className={`${styles.memberStatus} ${statusClass}`}
+                        >
                           {member.paymentStatus}
                         </span>
                       </div>
