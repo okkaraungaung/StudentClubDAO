@@ -9,6 +9,7 @@ import {
   createDaoClient,
   err,
   formatEth,
+  formatTimeRemaining,
   parseEth,
   shortAddress,
 } from "../lib/dao";
@@ -29,6 +30,7 @@ export default function ProposalsPage() {
   const [amountDraft, setAmountDraft] = useState("");
   const [proposals, setProposals] = useState([]);
   const [filter, setFilter] = useState("All");
+  const [now, setNow] = useState(() => Date.now());
 
   const loadProposals = async ({ silent = false, showErrors = true } = {}) => {
     if (!silent) {
@@ -63,6 +65,7 @@ export default function ProposalsPage() {
           amount: proposal.amount,
           approveVotes: String(proposal.approveVotes),
           rejectVotes: String(proposal.rejectVotes),
+          deadline: Number(proposal.deadline),
           status: proposalStatus,
           voted,
         });
@@ -91,6 +94,14 @@ export default function ProposalsPage() {
   useEffect(() => {
     void loadProposals();
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setNow(Date.now());
+    }, 30000);
+
+    return () => window.clearInterval(timer);
   }, []);
 
   const createProposal = async (event) => {
@@ -126,6 +137,7 @@ export default function ProposalsPage() {
       await transaction.wait();
 
       const proposalCount = await session.contract.proposalCount();
+      const durationMinutes = Number(duration);
       const optimisticProposal = {
         id: String(proposalCount),
         title,
@@ -133,6 +145,10 @@ export default function ProposalsPage() {
         amount: parseEth(amount),
         approveVotes: "0",
         rejectVotes: "0",
+        deadline:
+          Number.isFinite(durationMinutes) && durationMinutes > 0
+            ? Math.floor(Date.now() / 1000) + durationMinutes * 60
+            : Math.floor(Date.now() / 1000),
         status: "Voting Active",
         voted: false,
       };
@@ -230,7 +246,8 @@ export default function ProposalsPage() {
     return proposal.status === filter;
   });
 
-  const treasuryValue = treasuryBalance !== null ? formatEth(treasuryBalance) : "—";
+  const treasuryValue =
+    treasuryBalance !== null ? formatEth(treasuryBalance) : "—";
 
   let requestedAmountWei = null;
 
@@ -244,7 +261,9 @@ export default function ProposalsPage() {
 
   const hasAmountDraft = amountDraft.trim().length > 0;
   const requestedPercent =
-    requestedAmountWei !== null && treasuryBalance !== null && treasuryBalance > 0n
+    requestedAmountWei !== null &&
+    treasuryBalance !== null &&
+    treasuryBalance > 0n
       ? Number((requestedAmountWei * 10000n) / treasuryBalance) / 100
       : null;
   const amountIsOverTreasury =
@@ -532,37 +551,40 @@ export default function ProposalsPage() {
                             : `Enter an amount to compare it against the current treasury of ${treasuryValue}.`}
                     </p>
 
-                    {requestedAmountWei !== null && treasuryBalance !== null && (
-                      <div
-                        className={`${styles.amountComparison} ${
-                          amountIsOverTreasury
-                            ? styles.amountComparisonDanger
-                            : styles.amountComparisonSuccess
-                        }`}
-                      >
-                        <div>
-                          <span>Your ask</span>
-                          <strong>{formatEth(requestedAmountWei)}</strong>
-                        </div>
+                    {requestedAmountWei !== null &&
+                      treasuryBalance !== null && (
+                        <div
+                          className={`${styles.amountComparison} ${
+                            amountIsOverTreasury
+                              ? styles.amountComparisonDanger
+                              : styles.amountComparisonSuccess
+                          }`}
+                        >
+                          <div>
+                            <span>Your ask</span>
+                            <strong>{formatEth(requestedAmountWei)}</strong>
+                          </div>
 
-                        <div>
-                          <span>
-                            {amountIsOverTreasury ? "Over treasury" : "Remaining"}
-                          </span>
-                          <strong>
-                            {amountDifference !== null
-                              ? formatEth(amountDifference)
-                              : "—"}
-                          </strong>
-                        </div>
+                          <div>
+                            <span>
+                              {amountIsOverTreasury
+                                ? "Over treasury"
+                                : "Remaining"}
+                            </span>
+                            <strong>
+                              {amountDifference !== null
+                                ? formatEth(amountDifference)
+                                : "—"}
+                            </strong>
+                          </div>
 
-                        <div className={styles.amountComparisonSummary}>
-                          {requestedPercent !== null
-                            ? `${requestedPercent.toFixed(2)}% of treasury`
-                            : "Treasury comparison unavailable"}
+                          <div className={styles.amountComparisonSummary}>
+                            {requestedPercent !== null
+                              ? `${requestedPercent.toFixed(2)}% of treasury`
+                              : "Treasury comparison unavailable"}
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )}
                   </div>
 
                   <div className={styles.formGroup}>
@@ -661,6 +683,15 @@ export default function ProposalsPage() {
                   const isExecuting =
                     processingProposal === `${proposal.id}-execute`;
 
+                  const timeRemaining = formatTimeRemaining(
+                    proposal.deadline,
+                    now,
+                  );
+                  const deadlineClass =
+                    proposal.status === "Voting Active"
+                      ? styles.deadlineOpen
+                      : styles.deadlineClosed;
+
                   return (
                     <article className={styles.proposalCard} key={proposal.id}>
                       <div className={styles.proposalArtwork}>
@@ -670,13 +701,22 @@ export default function ProposalsPage() {
                           #{proposal.id}
                         </span>
 
-                        <span
-                          className={`${styles.statusBadge} ${getStatusClass(
-                            proposal.status,
-                          )}`}
-                        >
-                          {proposal.status}
-                        </span>
+                        <div className={styles.proposalBadgeGroup}>
+                          <span
+                            className={`${styles.statusBadge} ${getStatusClass(
+                              proposal.status,
+                            )}`}
+                          >
+                            {proposal.status}
+                          </span>
+
+                          <span
+                            className={`${styles.deadlineBadge} ${deadlineClass}`}
+                          >
+                            <UiIcon name="clock" size={12} />
+                            <span>{timeRemaining}</span>
+                          </span>
+                        </div>
 
                         <div className={styles.proposalArtworkIcon}>
                           <UiIcon name="document" size={43} />
