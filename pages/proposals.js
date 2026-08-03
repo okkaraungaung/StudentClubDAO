@@ -210,6 +210,12 @@ export default function ProposalsPage() {
 
   const execute = async (proposalId) => {
     try {
+      if (!(showAdmin || showExecutive)) {
+        throw new Error(
+          "Only executive members or admins can execute proposals.",
+        );
+      }
+
       setProcessingProposal(`${proposalId}-execute`);
       setStatus("");
 
@@ -682,7 +688,10 @@ export default function ProposalsPage() {
                   const canVote =
                     !proposal.voted && proposal.status === "Voting Active";
 
-                  const canExecute = proposal.status === "Approved";
+                  const canExecute =
+                    proposal.status === "Approved" &&
+                    (showAdmin || showExecutive);
+                  const canExecuteProposal = proposal.status === "Approved";
 
                   const approvalPercentage = getApprovalPercentage(proposal);
 
@@ -797,6 +806,11 @@ export default function ProposalsPage() {
                             type="button"
                             className={styles.executeButton}
                             disabled={!canExecute || isExecuting}
+                            title={
+                              canExecuteProposal && !canExecute
+                                ? "Only executive members and admins can execute proposals."
+                                : undefined
+                            }
                             onClick={() => execute(proposal.id)}
                           >
                             <UiIcon name="execute" size={16} />
