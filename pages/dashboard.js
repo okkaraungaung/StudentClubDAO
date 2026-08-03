@@ -34,6 +34,7 @@ export default function DashboardPage() {
   const [member, setMember] = useState(null);
   const [navUser, setNavUser] = useState("Connected");
   const [showAdmin, setShowAdmin] = useState(false);
+  const [showExecutive, setShowExecutive] = useState(false);
   const [walletCopied, setWalletCopied] = useState(false);
   const [nickname, setNickname] = useState("");
   const [depositAmount, setDepositAmount] = useState("");
@@ -80,6 +81,7 @@ export default function DashboardPage() {
       setShowAdmin(
         session.account.toLowerCase() === adminAddress.toLowerCase(),
       );
+      setShowExecutive(Number(session.member.role) === 2);
 
       setMetrics({
         adminAddress,
@@ -256,6 +258,7 @@ export default function DashboardPage() {
         navUser={navUser}
         profileName={nicknameValue}
         showAdmin={showAdmin}
+        showExecutive={showExecutive}
         actions={
           <div className="top-actions">
             <Link href="/proposals" className="market-button secondary">

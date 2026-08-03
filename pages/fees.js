@@ -24,6 +24,7 @@ export default function FeesPage() {
   const [navUser, setNavUser] = useState("Member");
   const [profileName, setProfileName] = useState("Member");
   const [showAdmin, setShowAdmin] = useState(false);
+  const [showExecutive, setShowExecutive] = useState(false);
   const [feeValue, setFeeValue] = useState("");
   const [periods, setPeriods] = useState([]);
   const [filter, setFilter] = useState("All");
@@ -68,6 +69,7 @@ export default function FeesPage() {
       setShowAdmin(
         session.account.toLowerCase() === adminAddress.toLowerCase(),
       );
+      setShowExecutive(Number(session.member.role) === 2);
 
       setFeeValue(formatEth(membershipFee));
       setPeriods(items.reverse());
@@ -150,6 +152,7 @@ export default function FeesPage() {
         navUser={navUser}
         profileName={profileName}
         showAdmin={showAdmin}
+        showExecutive={showExecutive}
         actions={
           <div className={styles.headerActions}>
             <button

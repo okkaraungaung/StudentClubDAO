@@ -1,7 +1,11 @@
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { useState } from "react";
-import { initialFrom } from "../lib/dao";
+import { useEffect, useState } from "react";
+import {
+  createDaoClient,
+  initialFrom,
+  subscribeDaoChainUpdates,
+} from "../lib/dao";
 import UiIcon from "./UiIcon";
 
 const NAV_ITEMS = [
@@ -21,7 +25,7 @@ const NAV_ITEMS = [
   {
     href: "/proposals",
     label: "Proposals",
-    badge: "3",
+    badge: null,
     icon: (
       <path
         strokeLinecap="round"
@@ -113,8 +117,58 @@ export default function DashboardLayout({
 }) {
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [proposalBadge, setProposalBadge] = useState(null);
   const displayName = profileName || navUser || "Member";
   const avatar = initialFrom(displayName);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadProposalBadge = async () => {
+      try {
+        const session = await createDaoClient();
+        const proposalCount = await session.contract.proposalCount();
+        const shouldIncludeApproved = showAdmin || showExecutive;
+        let count = 0;
+
+        for (let i = 1n; i <= proposalCount; i += 1n) {
+          const status = await session.contract.getProposalStatus(i);
+
+          if (status === "Voting Active") {
+            count += 1;
+            continue;
+          }
+
+          if (shouldIncludeApproved && status === "Approved") {
+            count += 1;
+          }
+        }
+
+        if (!cancelled) {
+          setProposalBadge(count > 0 ? String(count) : null);
+        }
+      } catch {
+        if (!cancelled) {
+          setProposalBadge(null);
+        }
+      }
+    };
+
+    void loadProposalBadge();
+
+    const unsubscribe = subscribeDaoChainUpdates(() => {
+      void loadProposalBadge();
+    });
+
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, [showAdmin, showExecutive]);
+
+  const navItems = NAV_ITEMS.map((item) =>
+    item.href === "/proposals" ? { ...item, badge: proposalBadge } : item,
+  );
 
   return (
     <div className="dashboard-shell">
@@ -129,7 +183,7 @@ export default function DashboardLayout({
         </div>
         <nav className="sidebar-nav">
           <div className="nav-section">Menu</div>
-          {NAV_ITEMS.map((item) => {
+          {navItems.map((item) => {
             const requiresAdmin = item.requiredAccess === "admin";
             const requiresExecutive = item.requiredAccess === "executive";
             const hidden =
@@ -153,12 +207,18 @@ export default function DashboardLayout({
                   {item.icon}
                 </svg>
                 {item.label}
-                {item.badge ? <span className="nav-badge">{item.badge}</span> : null}
+                {item.badge ? (
+                  <span className="nav-badge">{item.badge}</span>
+                ) : null}
               </Link>
             );
           })}
           <div className="nav-section">Account</div>
-          <Link href="/" className="nav-item" onClick={() => setSidebarOpen(false)}>
+          <Link
+            href="/"
+            className="nav-item"
+            onClick={() => setSidebarOpen(false)}
+          >
             <svg
               className="nav-icon"
               fill="none"

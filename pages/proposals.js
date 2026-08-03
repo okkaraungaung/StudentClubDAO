@@ -26,6 +26,7 @@ export default function ProposalsPage() {
   const [navUser, setNavUser] = useState("Member");
   const [profileName, setProfileName] = useState("Member");
   const [showAdmin, setShowAdmin] = useState(false);
+  const [showExecutive, setShowExecutive] = useState(false);
   const [showCreateBox, setShowCreateBox] = useState(false);
   const [treasuryBalance, setTreasuryBalance] = useState(null);
   const [amountDraft, setAmountDraft] = useState("");
@@ -78,7 +79,9 @@ export default function ProposalsPage() {
       setShowAdmin(
         session.account.toLowerCase() === adminAddress.toLowerCase(),
       );
-      setShowCreateBox(Number(session.member.role) === 2);
+      const isExecutive = Number(session.member.role) === 2;
+      setShowExecutive(isExecutive);
+      setShowCreateBox(isExecutive);
       setProposals(items.reverse());
     } catch (error) {
       if (showErrors) {
@@ -323,6 +326,7 @@ export default function ProposalsPage() {
         navUser={navUser}
         profileName={profileName}
         showAdmin={showAdmin}
+        showExecutive={showExecutive}
         actions={
           <div className={styles.headerActions}>
             <button
