@@ -28,6 +28,7 @@ export default function FeesPage() {
   const [feeValue, setFeeValue] = useState("");
   const [periods, setPeriods] = useState([]);
   const [filter, setFilter] = useState("All");
+  const [now, setNow] = useState(() => Date.now());
 
   const loadFees = async ({ silent = false } = {}) => {
     if (!silent) {
@@ -88,8 +89,24 @@ export default function FeesPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setNow(Date.now());
+    }, 60000);
+
+    return () => window.clearInterval(timer);
+  }, []);
+
   const payFee = async (periodId) => {
     try {
+      const period = periods.find((item) => item.id === periodId);
+      const isClosed =
+        period && !period.paid && Number(period.endTime) * 1000 <= Date.now();
+
+      if (isClosed) {
+        throw new Error("This payment period has ended.");
+      }
+
       setProcessingPeriod(periodId);
       setStatus("");
 
@@ -135,6 +152,9 @@ export default function FeesPage() {
 
     return true;
   });
+
+  const hasDeadlinePassed = (period) =>
+    !period.paid && Number(period.endTime) * 1000 <= now;
 
   return (
     <>
@@ -359,6 +379,7 @@ export default function FeesPage() {
               <div className={styles.periodGrid}>
                 {filteredPeriods.map((period) => {
                   const isProcessing = processingPeriod === period.id;
+                  const isClosed = hasDeadlinePassed(period);
 
                   return (
                     <article
@@ -414,12 +435,21 @@ export default function FeesPage() {
                         <span className={styles.ethBadge}>ETH</span>
                       </div>
 
+                      {isClosed && !period.paid && (
+                        <p className={styles.closedNote}>
+                          This payment period has ended, so fees can no longer
+                          be paid.
+                        </p>
+                      )}
+
                       <button
                         type="button"
                         className={
                           period.paid ? styles.paidButton : styles.payButton
                         }
-                        disabled={period.paid || loading || isProcessing}
+                        disabled={
+                          period.paid || isClosed || loading || isProcessing
+                        }
                         onClick={() => payFee(period.id)}
                       >
                         <UiIcon
@@ -429,9 +459,11 @@ export default function FeesPage() {
 
                         {period.paid
                           ? "Payment completed"
-                          : isProcessing
-                            ? "Processing payment..."
-                            : `Pay ${feeValue || ""} ETH`}
+                          : isClosed
+                            ? "Payment closed"
+                            : isProcessing
+                              ? "Processing payment..."
+                              : `Pay ${feeValue || ""} ETH`}
                       </button>
                     </article>
                   );

@@ -544,6 +544,14 @@
   font-weight: 850 !important;
 }
 
+.closedNote {
+  margin: 0 0 14px;
+  color: #b54708;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
 .payButton,
 .paidButton {
   display: inline-flex;
